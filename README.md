@@ -1,39 +1,57 @@
-# Cloudflare DDNS for UniFi OS
+# 🌩️ Cloudflare DDNS for UniFi OS
 
-A Cloudflare Worker script that exposes a UniFi-compatible DDNS API to dynamically update the IP address of a DNS A record.
+[![CodeQL](https://github.com/willswire/unifi-ddns/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/willswire/unifi-ddns/actions/workflows/github-code-scanning/codeql)
+[![Code Coverage](https://github.com/willswire/unifi-ddns/actions/workflows/coverage.yml/badge.svg)](https://github.com/willswire/unifi-ddns/actions/workflows/coverage.yml)
+[![Dependabot Updates](https://github.com/willswire/unifi-ddns/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/willswire/unifi-ddns/actions/workflows/dependabot/dependabot-updates)
+[![Deploy](https://github.com/willswire/unifi-ddns/actions/workflows/deploy.yml/badge.svg)](https://github.com/willswire/unifi-ddns/actions/workflows/deploy.yml)
 
-## Why?
+A Cloudflare Worker script that enables UniFi devices (e.g., UDM-Pro, USG) to dynamically update DNS A/AAAA records on Cloudflare.
 
-I have a UniFi Dream Machine Pro (UDM-Pro), and I want to update my Cloudflare domain name DNS records when my public IP address changes. Unfortunately, UniFi does not come pre-configured to support Cloudflare as one of its DDNS providers.
+## Why Use This?
 
-### Configuring Cloudflare
-You must have a Cloudflare account and your domain must be configured to point to the Cloudflare nameservers before you continue.
+UniFi devices do not natively support Cloudflare as a DDNS provider. This script bridges that gap, allowing your UniFi device to keep your DNS records updated with your public IP address.
 
-#### Install With Click To Deploy
-1. Deploy the Worker: [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/workerforce/unifi-ddns)
-3. Navigate to the Cloudflare Workers dashboard
-4. Once the deployment is complete, take note of it's \*.workers.dev route. More on routes for Cloudflare Workers [here](https://developers.cloudflare.com/workers/platform/routes#routes-with-workersdev).
-5. Create an API token so the Worker can update your DNS records. Go to https://dash.cloudflare.com/profile/api-tokens and select "Create token". On the next page, scroll down and click the "Get Started" button next to the "Create Custom Token" label. Select **Zone:DNS:Edit** for the "Permissions" drop-down, and include your target zone under the "Zone Resources" drop-down. Copy your API Key - you will need it later when configuring your UniFi OS Controller.
+## 🚀 **Setup Overview**
 
-#### Install With Wrangler CLI
-1. Clone or download this project
-2. Ensure you have the [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/install-and-update/) installed on your system
-3. Log in with wrangler, and run `wrangler deploy`.
-4. Once you have created the worker, take note of it's \*.workers.dev route. More on routes for Cloudflare Workers [here](https://developers.cloudflare.com/workers/platform/routes#routes-with-workersdev).
-5. Create an API token so the Worker can update your DNS records. Go to https://dash.cloudflare.com/profile/api-tokens and select "Create token". On the next page, scroll down and click the "Get Started" button next to the "Create Custom Token" label. Select **Zone:DNS:Edit** for the "Permissions" drop-down, and include your target zone under the "Zone Resources" drop-down. Copy your API Key - you will need it later when configuring your UniFi OS Controller.
+### 1. **Deploy the Cloudflare Worker**
 
-### Configuring UniFi OS
-1. Log on to your [UniFi OS Controller](https://unifi.ui.com/)
-2. Navigate to Settings > Internet > WAN and scroll down to **Dynamic DNS**. 
-3. Click **Create New Dynamic DNS** and enter the following information:
-- `Service`: you must choose `dyndns`
-- `Hostname`: the full subdomain and hostname of the record you want to update (e.g. `subdomain.mydomain.com`, `mydomain.com` for root domain)
-- `Username`: the domain name containing the record (e.g. `mydomain.com`)
-- `Password`: the Cloudflare API Token you created earlier
-- `Server`: the Cloudflare Worker route `<worker-name>.<worker-subdomain>.workers.dev/update?ip=%i&hostname=%h`. 
+#### **Option 1: Click to Deploy**
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/willswire/unifi-ddns)
 
-#### Important Notes!
-- If you are attempting to update a subdomain (`sub.example.com`), you must manually create an A record for it **first** in your Cloudflare dashboard.
-- On UniFi devices older than the UDM, the `Server` value should be configured as seen below, with no path suffix: `<worker-name>.<worker-subdomain>.workers.dev`
-- If you receive a log message on your Unifi device like `inadyn[2173778]: Failed resolving hostname https: Name or service not known`, remove `https://` from the `Server` field.  
+1. Click the button above.
+2. Complete the deployment.
+3. Note the `*.workers.dev` route.
 
+#### **Option 2: Deploy with Wrangler CLI**
+1. Clone this repository.
+2. Install [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/install-and-update/).
+3. Run:
+   ```sh
+   wrangler login
+   wrangler deploy
+   ```
+4. Note the `*.workers.dev` route.
+
+### 2. **Generate a Cloudflare API Token**
+
+1. Go to the [Cloudflare Dashboard](https://dash.cloudflare.com/).
+2. Navigate to **Profile > API Tokens**
+3. Create a token using the **Edit zone DNS** template.
+4. Scope the token to **one** specific zone.
+5. Save the token securely.
+
+### 3. **Configure UniFi OS**
+
+1. Log in to your [UniFi OS Controller](https://unifi.ui.com/).
+2. Go to **Settings > Internet > WAN > Dynamic DNS**.
+3. Create New Dynamic DNS with the following information:
+   - **Service:** `custom`
+   - **Hostname:** `subdomain.example.com` or `example.com`
+   - **Username:** Cloudflare Account Email Address (e.g., `you@example.com`)
+   - **Password:** Cloudflare User API Token *(not an Account API Token)*
+   - **Server:** `<worker-name>.<worker-subdomain>.workers.dev/update?ip=%i&hostname=%h`
+     *(Omit `https://`)*
+
+## 🛠️ **Testing & Troubleshooting**
+
+Using this script with various Ubiquiti devices and different UniFi software versions can introduce unique challenges. If you encounter issues, start by checking the FAQ in `/docs/faq.md`. If you don’t find a solution, you can ask a question on the [discussions page](https://github.com/willswire/unifi-ddns/discussions/new?category=q-a). If the problem persists, please raise an issue [here](https://github.com/willswire/unifi-ddns/issues).
